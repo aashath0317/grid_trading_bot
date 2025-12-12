@@ -20,17 +20,18 @@ from .exchange_interface import ExchangeInterface
 
 
 class LiveExchangeService(ExchangeInterface):
-    def __init__(
-        self,
-        config_manager: ConfigManager,
-        is_paper_trading_activated: bool,
-    ):
+    def __init__(self, config_manager: ConfigManager, is_paper_trading_activated: bool):
         self.config_manager = config_manager
         self.is_paper_trading_activated = is_paper_trading_activated
         self.logger = logging.getLogger(self.__class__.__name__)
         self.exchange_name = self.config_manager.get_exchange_name()
-        self.api_key = self._get_env_variable("EXCHANGE_API_KEY")
-        self.secret_key = self._get_env_variable("EXCHANGE_SECRET_KEY")
+        
+        self.api_key = getattr(config_manager, "get_api_key", lambda: None)() or os.getenv("EXCHANGE_API_KEY")
+        self.secret_key = getattr(config_manager, "get_api_secret", lambda: None)() or os.getenv("EXCHANGE_SECRET_KEY")
+        
+        if not self.api_key or not self.secret_key:
+             raise MissingEnvironmentVariableError("API Key or Secret missing.")
+
         self.exchange = self._initialize_exchange()
         self.connection_active = False
 
